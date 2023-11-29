@@ -17,7 +17,7 @@ export interface User {
   email: string
   password: string
   account_verified: boolean
-  last_login: string
+  last_login: string | null
   role: string
   phone: string
   lat: number

@@ -5,14 +5,16 @@ import { compare, toHash } from "./utils"
 import { LoginRequest, SignupRequest, User } from "./types"
 import { pool } from "../../db"
 import { body, validationResult } from "express-validator"
+import crypto from 'crypto'
 
 declare global {
   namespace Express {
     interface Request {
-      user?: string | JwtPayload
+      user?: User
     }
   }
 }
+
 
 const router = Router()
 
@@ -60,7 +62,7 @@ router.post(
         email,
         password: hashedPassword,
         phone,
-        last_login: "N/A",
+        last_login: null,
         account_verified: false,
         role: "user",
         lat,
@@ -84,8 +86,10 @@ router.post(
           user["lon"],
         ],
       )
-
       const token = jwt.sign(user, jwt_secret)
+      
+      // ** TODO **
+      //  should not return password in the response
       return res.status(201).json({ user, token })
     } catch (err) {
       console.log(err)
@@ -119,6 +123,9 @@ router.post(
       if (!isEqual) return res.status(400).json({ message: "Wrong credentials" })
 
       const token = jwt.sign(user, jwt_secret)
+
+      // ** TODO **
+      //  should not return password in the response
       return res.status(200).json({ user, token })
     } catch (err) {
       console.log(err)
@@ -127,7 +134,7 @@ router.post(
   },
 )
 
-const currentUserMiddleware = (req: any, res: any, next: any) => {
+export const currentUserMiddleware = (req: any, res: any, next: any) => {
   const userToken: string | undefined = req["headers"]?.authorization?.split(" ")[1]
 
   if (!userToken) return res.json({ message: "Token not provided" }).status(401)
@@ -140,13 +147,5 @@ const currentUserMiddleware = (req: any, res: any, next: any) => {
     return
   })
 }
-
-router.get("/users/all", currentUserMiddleware, async (req, res) => {
-  console.log(req.user)
-
-  const [rows] = await pool.execute("SELECT * FROM users")
-  const users = rows as User[]
-  return res.status(200).json({ users })
-})
 
 export default router
